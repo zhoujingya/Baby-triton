@@ -1,0 +1,6 @@
+numpy
+decorator
+psutil
+typing_extensions
+packaging
+attrs
