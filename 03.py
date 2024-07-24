@@ -1,5 +1,6 @@
 import inspect
 import ast
+from typing import Dict, Any
 from tvm import relax as rx
 from tvm.script import relax as R
 from tvm.script.ir_builder import relax as relax_builder, ir as I, IRBuilder as IB
@@ -35,6 +36,7 @@ class CodeGenerator(ast.NodeVisitor):
         self.ir_module = None
         self.entry = None
         self.ret = None
+        self.local_var_table: Dict[str, Any] = {}
 
     def code_gen(self):
         with self.ib:
@@ -66,8 +68,39 @@ class CodeGenerator(ast.NodeVisitor):
 
     def visit_Pass(self, node: ast.Pass):
         pass
-    
 
+    def visit_Assign(self, node: ast.Assign):
+        if len(node.targets) != 1:
+            raise NotImplementedError(
+                "Doesn't support simultaneous multiple assignment like 'a = b = c' in AST node type: {}".format(
+                    type(node).__name__
+                )
+            )
+        target: rx.Var = self.visit(node.targets[0])
+        value = self.visit(node.value)
+        self.local_var_table[target.name_hint] = value
+        self.ib.name(target.name_hint, value)
+
+    def visit_Name(self, node: ast.Name):
+        name = node.id
+        if isinstance(node.ctx, ast.Store):
+            if name not in self.local_var_table.keys():
+                self.local_var_table[name] = rx.Var(
+                    name, struct_info=rx.ObjectStructInfo()
+                )
+        return self.local_var_table[name]
+
+    def visit_BinOp(self, node: ast.BinOp):
+        lhs = self.visit(node.left)
+        rhs = self.visit(node.right)
+        return R.emit(self._binOp_maker(node.op)(lhs, rhs))
+
+    def visit_Return(self, node: ast.Return):
+        ret_value = self.visit(node.value)
+        return ret_value
+
+    def visit_Constant(self, node: ast.Constant):
+        return R.emit(rx.const(node.value))
 
     def _visit_compound_stmt(self, stmts):
         assert isinstance(stmts, (list, tuple))
@@ -76,6 +109,14 @@ class CodeGenerator(ast.NodeVisitor):
             if ret is not None and isinstance(stmt, ast.Return):
                 self.ret = ret
 
+    def _binOp_maker(self, node: ast.operator):
+        if isinstance(node, ast.Add):
+            return R.add
+        else:
+            raise NotImplementedError(
+                "Unsupported AST node type: {}".format(type(node).__name__)
+            )
+
     def generic_visit(self, node: ast.AST):
         raise NotImplementedError(
             "Unsupported AST node type: {}".format(type(node).__name__)
@@ -83,8 +124,9 @@ class CodeGenerator(ast.NodeVisitor):
 
 
 @jit(target="cpu")
-def add(a, b):
-    pass
+def add():
+    out = 1 + 1
+    return out
 
 
 add()
