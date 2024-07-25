@@ -4,3 +4,4 @@ psutil
 typing_extensions
 packaging
 attrs
+lit

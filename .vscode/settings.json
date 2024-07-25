@@ -1,5 +1,6 @@
 {
   "python.analysis.extraPaths": [
-    "./tvm/python"
+    "./tvm/python",
+    "./src"
   ]
 }

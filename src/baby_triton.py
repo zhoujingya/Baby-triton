@@ -121,12 +121,3 @@ class CodeGenerator(ast.NodeVisitor):
         raise NotImplementedError(
             "Unsupported AST node type: {}".format(type(node).__name__)
         )
-
-
-@jit(target="cpu")
-def add():
-    out = 1 + 1
-    return out
-
-
-add()
