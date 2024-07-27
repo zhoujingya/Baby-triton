@@ -33,5 +33,4 @@ jobs:
       shell: bash
       run: |
         git submodule update --recursive
-        cd tvm
         bash build-linux.sh
