@@ -32,5 +32,4 @@ jobs:
     - name: Start building tvm
       shell: bash
       run: |
-        git submodule update --recursive
-        bash build-linux.sh
+          echo "Hello baby!!"
